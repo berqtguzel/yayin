@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { useSearchParams } from "react-router-dom";
 
+// 🌐 Render'daki backend adresi doğrudan burada:
 const socket = io("https://yayin-backend.onrender.com");
 
 const App = () => {
@@ -155,7 +156,7 @@ const App = () => {
       <div style={{ marginTop: 20 }}>
         <input
           type="text"
-          placeholder="Adınz"
+          placeholder="Adınız"
           value={name}
           onChange={(e) => setName(e.target.value)}
           style={{ padding: 5 }}
