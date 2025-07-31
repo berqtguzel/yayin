@@ -15,40 +15,51 @@ const App = () => {
   const [newMessage, setNewMessage] = useState("");
   const [name, setName] = useState("");
   const peers = useRef({});
+const [viewerCount, setViewerCount] = useState(0);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  
 
   useEffect(() => {
     if (!role || !name) return;
 
     if (role === "broadcaster") {
-      setBroadcasterName(name);
+  setBroadcasterName(name);
 
-      navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }).then(stream => {
-        localVideoRef.current.srcObject = stream;
+  navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }).then(stream => {
+    localVideoRef.current.srcObject = stream;
 
-        socket.on("user-joined", async (id) => {
-          const pc = new RTCPeerConnection();
-          peers.current[id] = pc;
+    // ✅ Hoş geldin mesajı burada
+    socket.emit("chat-message", {
+      room: roomId,
+      sender: "Sistem",
+      message: `${name} yayını başlattı 🎬`,
+    });
 
-          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    // İzleyici bağlantılarını dinle
+    socket.on("user-joined", async (id) => {
+      const pc = new RTCPeerConnection();
+      peers.current[id] = pc;
 
-          pc.onicecandidate = (event) => {
-            if (event.candidate) {
-              socket.emit("ice-candidate", {
-                to: id,
-                candidate: event.candidate,
-              });
-            }
-          };
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          socket.emit("offer", { to: id, offer });
-        });
-      });
-    }
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit("ice-candidate", {
+            to: id,
+            candidate: event.candidate,
+          });
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit("offer", { to: id, offer });
+    });
+  });
+}
+
 
     if (role === "viewer") {
       socket.on("offer", async ({ from, offer }) => {
@@ -146,6 +157,9 @@ const App = () => {
 
   return (
     <div style={{ padding: 20 }}>
+      <div style={{ marginTop: 10, fontWeight: "bold" }}>
+  👥 İzleyici Sayısı: {viewerCount}
+</div>
       <h1>{role === "broadcaster" ? "🖥️ Ekran Paylaşımı" : "📺 Yayını İzliyorsun"}</h1>
 
       {role === "broadcaster" && (
