@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { useSearchParams } from "react-router-dom";
 
-// 🌐 Render'daki backend adresi doğrudan burada:
 const socket = io("https://yayin-backend.onrender.com");
 
 const App = () => {
@@ -14,52 +13,48 @@ const App = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [name, setName] = useState("");
+  const [viewerCount, setViewerCount] = useState(0);
   const peers = useRef({});
-const [viewerCount, setViewerCount] = useState(0);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
-  
 
   useEffect(() => {
     if (!role || !name) return;
 
     if (role === "broadcaster") {
-  setBroadcasterName(name);
+      setBroadcasterName(name);
 
-  navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }).then(stream => {
-    localVideoRef.current.srcObject = stream;
+      navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }).then((stream) => {
+        localVideoRef.current.srcObject = stream;
 
-    // ✅ Hoş geldin mesajı burada
-    socket.emit("chat-message", {
-      room: roomId,
-      sender: "Sistem",
-      message: `${name} yayını başlattı 🎬`,
-    });
+        socket.emit("chat-message", {
+          room: roomId,
+          sender: "Sistem",
+          message: `${name} yayını başlattı 🎬`,
+        });
 
-    // İzleyici bağlantılarını dinle
-    socket.on("user-joined", async (id) => {
-      const pc = new RTCPeerConnection();
-      peers.current[id] = pc;
+        socket.on("user-joined", async (id) => {
+          const pc = new RTCPeerConnection();
+          peers.current[id] = pc;
 
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+          stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit("ice-candidate", {
-            to: id,
-            candidate: event.candidate,
-          });
-        }
-      };
+          pc.onicecandidate = (event) => {
+            if (event.candidate) {
+              socket.emit("ice-candidate", {
+                to: id,
+                candidate: event.candidate,
+              });
+            }
+          };
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit("offer", { to: id, offer });
-    });
-  });
-}
-
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit("offer", { to: id, offer });
+        });
+      });
+    }
 
     if (role === "viewer") {
       socket.on("offer", async ({ from, offer }) => {
@@ -98,16 +93,22 @@ const [viewerCount, setViewerCount] = useState(0);
       }
     });
 
-    socket.emit("join", roomId);
+    // ✅ GÜNCELLENDİ
+    socket.emit("join", { room: roomId, name });
 
     const handleChatMessage = ({ sender, message }) => {
-      setChatMessages(prev => [...prev, { sender, message }]);
+      setChatMessages((prev) => [...prev, { sender, message }]);
     };
 
     socket.on("chat-message", handleChatMessage);
 
+    socket.on("viewer-count", (count) => {
+      setViewerCount(count);
+    });
+
     return () => {
       socket.off("chat-message", handleChatMessage);
+      socket.off("viewer-count");
     };
   }, [role, roomId, name]);
 
@@ -158,14 +159,12 @@ const [viewerCount, setViewerCount] = useState(0);
   return (
     <div style={{ padding: 20 }}>
       <div style={{ marginTop: 10, fontWeight: "bold" }}>
-  👥 İzleyici Sayısı: {viewerCount}
-</div>
+        👥 İzleyici Sayısı: {viewerCount}
+      </div>
       <h1>{role === "broadcaster" ? "🖥️ Ekran Paylaşımı" : "📺 Yayını İzliyorsun"}</h1>
 
-      {role === "broadcaster" && (
-        <video ref={localVideoRef} autoPlay muted playsInline width="45%" />
-      )}
-      <video ref={remoteVideoRef} autoPlay playsInline width="45%" />
+      {role === "broadcaster" && <video ref={localVideoRef} autoPlay muted playsInline width="45%" />}
+      {role === "viewer" && <video ref={remoteVideoRef} autoPlay playsInline width="45%" />}
 
       <div style={{ marginTop: 20 }}>
         <input
@@ -177,18 +176,17 @@ const [viewerCount, setViewerCount] = useState(0);
         />
       </div>
 
-      <div style={{
-        border: "1px solid gray",
-        height: 200,
-        overflowY: "auto",
-        margin: "10px 0",
-        padding: 10
-      }}>
+      <div
+        style={{
+          border: "1px solid gray",
+          height: 200,
+          overflowY: "auto",
+          margin: "10px 0",
+          padding: 10,
+        }}
+      >
         {chatMessages.map((msg, i) => (
-          <div
-            key={i}
-            style={{ color: msg.sender === broadcasterName ? "crimson" : "black" }}
-          >
+          <div key={i} style={{ color: msg.sender === broadcasterName ? "crimson" : "black" }}>
             <strong>{msg.sender}:</strong> {msg.message}
           </div>
         ))}
