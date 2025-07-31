@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { useSearchParams } from "react-router-dom";
 
-const socket = io("http://localhost:5000");
+const socket = io("https://yayin-backend.onrender.com");
 
 const App = () => {
   const [searchParams] = useSearchParams();
@@ -155,7 +155,7 @@ const App = () => {
       <div style={{ marginTop: 20 }}>
         <input
           type="text"
-          placeholder="Adınız"
+          placeholder="Adınz"
           value={name}
           onChange={(e) => setName(e.target.value)}
           style={{ padding: 5 }}
