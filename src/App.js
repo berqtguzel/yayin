@@ -35,7 +35,12 @@ const App = () => {
         });
 
         socket.on("user-joined", async (id) => {
-          const pc = new RTCPeerConnection();
+        const pc = new RTCPeerConnection({
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" } // Google STUN server'ı
+  ]
+});
+
           peers.current[id] = pc;
 
           stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -57,8 +62,11 @@ const App = () => {
     }
 
     if (role === "viewer") {
-      socket.on("offer", async ({ from, offer }) => {
-        const pc = new RTCPeerConnection();
+     socket.on("offer", async ({ from, offer }) => {
+  const pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
         peers.current[from] = pc;
 
         pc.ontrack = (event) => {
